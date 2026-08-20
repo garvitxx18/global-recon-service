@@ -1,0 +1,13 @@
+.gradle/
+build/
+out/
+.idea/
+*.iml
+.classpath
+.project
+.settings/
+.vscode/
+*.log
+.DS_Store
+bin/
+!gradle/wrapper/gradle-wrapper.jar

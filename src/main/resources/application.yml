@@ -1,0 +1,47 @@
+spring:
+  application:
+    name: global-recon-service
+  datasource:
+    url: jdbc:mysql://localhost:3306/global_recon?useSSL=false&allowPublicKeyRetrieval=true&characterEncoding=utf8
+    username: recon
+    password: recon
+  jpa:
+    hibernate:
+      ddl-auto: update
+    open-in-view: false
+    properties:
+      hibernate:
+        jdbc:
+          batch_size: 50
+        order_inserts: true
+        order_updates: true
+  servlet:
+    multipart:
+      max-file-size: 200MB
+      max-request-size: 200MB
+  cloud:
+    openfeign:
+      client:
+        config:
+          llmClient:
+            connect-timeout: 5000
+            read-timeout: 30000
+            logger-level: basic
+
+server:
+  port: 8080
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+
+llm:
+  mock-enabled: true
+  api:
+    url: http://localhost:9080
+    path: /v1/complete
+
+recon:
+  chunk-size: 10000
