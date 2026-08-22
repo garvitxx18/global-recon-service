@@ -2,15 +2,21 @@ spring:
   application:
     name: global-recon-service
   datasource:
-    url: jdbc:mysql://localhost:3306/global_recon?useSSL=false&allowPublicKeyRetrieval=true&characterEncoding=utf8
-    username: recon
-    password: recon
+    url: jdbc:h2:file:./data/global_recon;MODE=PostgreSQL;AUTO_SERVER=TRUE;DB_CLOSE_DELAY=-1
+    username: sa
+    password:
+    driver-class-name: org.h2.Driver
+  h2:
+    console:
+      enabled: true
+      path: /h2-console
   jpa:
     hibernate:
       ddl-auto: update
     open-in-view: false
     properties:
       hibernate:
+        dialect: org.hibernate.dialect.H2Dialect
         jdbc:
           batch_size: 50
         order_inserts: true
@@ -27,6 +33,10 @@ spring:
             connect-timeout: 5000
             read-timeout: 30000
             logger-level: basic
+          geminiClient:
+            connect-timeout: 10000
+            read-timeout: 90000
+            logger-level: basic
 
 server:
   port: 8080
@@ -37,11 +47,30 @@ management:
       exposure:
         include: health,info
 
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+    operations-sorter: method
+  api-docs:
+    path: /v3/api-docs
+
 llm:
-  mock-enabled: true
+  provider: gemini
+  mock-enabled: false
   api:
     url: http://localhost:9080
     path: /v1/complete
+  gemini:
+    base-url: https://generativelanguage.googleapis.com
+    api-key: ${GEMINI_API_KEY:}
+    model: gemini-3.6-flash
 
 recon:
   chunk-size: 10000
+  queue-workers: 4
+
+logging:
+  file:
+    name: logs/global-recon.log
+  level:
+    global.recon.service.feignclient.GeminiClient: INFO

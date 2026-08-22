@@ -9,6 +9,7 @@ public class ReconFieldMappingRequest {
     private MatchType matchType;
     private BigDecimal tolerance;
     private Double confidence;
+    private Boolean included;
 
     public String getLeftField() {
         return leftField;
@@ -48,5 +49,13 @@ public class ReconFieldMappingRequest {
 
     public void setConfidence(Double confidence) {
         this.confidence = confidence;
+    }
+
+    public Boolean getIncluded() {
+        return included;
+    }
+
+    public void setIncluded(Boolean included) {
+        this.included = included;
     }
 }

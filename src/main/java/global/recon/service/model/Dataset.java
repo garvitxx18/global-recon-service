@@ -5,12 +5,15 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.Id;
+import jakarta.persistence.Index;
 import jakarta.persistence.Table;
 
 import java.time.Instant;
 
 @Entity
-@Table(name = "dataset")
+@Table(name = "dataset", indexes = {
+        @Index(name = "idx_dataset_owner", columnList = "owner_email")
+})
 public class Dataset {
 
     @Id
@@ -36,6 +39,15 @@ public class Dataset {
 
     @Column(length = 1024)
     private String errorMessage;
+
+    @Column(name = "owner_email", nullable = false, length = 320)
+    private String ownerEmail;
+
+    @Column(name = "ingestion_notes", length = 4000)
+    private String ingestionNotes;
+
+    @Column(name = "record_path", length = 255)
+    private String recordPath;
 
     @Column(nullable = false)
     private Instant createdAt;
@@ -97,6 +109,30 @@ public class Dataset {
 
     public void setErrorMessage(String errorMessage) {
         this.errorMessage = errorMessage;
+    }
+
+    public String getOwnerEmail() {
+        return ownerEmail;
+    }
+
+    public void setOwnerEmail(String ownerEmail) {
+        this.ownerEmail = ownerEmail;
+    }
+
+    public String getIngestionNotes() {
+        return ingestionNotes;
+    }
+
+    public void setIngestionNotes(String ingestionNotes) {
+        this.ingestionNotes = ingestionNotes;
+    }
+
+    public String getRecordPath() {
+        return recordPath;
+    }
+
+    public void setRecordPath(String recordPath) {
+        this.recordPath = recordPath;
     }
 
     public Instant getCreatedAt() {

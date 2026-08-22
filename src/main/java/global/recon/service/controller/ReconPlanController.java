@@ -1,10 +1,12 @@
 package global.recon.service.controller;
 
 import global.recon.service.model.DiscoverMappingRequest;
+import global.recon.service.model.ReconJob;
 import global.recon.service.model.ReconPlan;
 import global.recon.service.model.UpdateReconPlanRequest;
-import global.recon.service.service.MappingDiscoveryService;
+import global.recon.service.service.JobQueueService;
 import global.recon.service.service.ReconPlanService;
+import io.swagger.v3.oas.annotations.Operation;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -20,18 +22,20 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/v1/recon-plans")
 public class ReconPlanController {
 
-    private final MappingDiscoveryService mappingDiscoveryService;
+    private final JobQueueService jobQueueService;
     private final ReconPlanService reconPlanService;
 
-    public ReconPlanController(MappingDiscoveryService mappingDiscoveryService, ReconPlanService reconPlanService) {
-        this.mappingDiscoveryService = mappingDiscoveryService;
+    public ReconPlanController(JobQueueService jobQueueService, ReconPlanService reconPlanService) {
+        this.jobQueueService = jobQueueService;
         this.reconPlanService = reconPlanService;
     }
 
+    @Operation(summary = "Queue mapping discovery", description = "Returns a job immediately. Poll GET /api/v1/jobs/{jobId} until COMPLETED, then use resultId as the plan id.")
     @PostMapping("/discover")
-    @ResponseStatus(HttpStatus.CREATED)
-    public ReconPlan discover(@Valid @RequestBody DiscoverMappingRequest request) {
-        return mappingDiscoveryService.discover(request.getLeftDatasetId(), request.getRightDatasetId());
+    @ResponseStatus(HttpStatus.ACCEPTED)
+    public ReconJob discover(@Valid @RequestBody DiscoverMappingRequest request) {
+        return jobQueueService.enqueueDiscovery(
+                request.getLeftDatasetId(), request.getRightDatasetId(), request.getNotes());
     }
 
     @GetMapping("/{planId}")

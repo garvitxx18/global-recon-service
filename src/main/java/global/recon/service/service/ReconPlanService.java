@@ -8,7 +8,14 @@ import java.util.List;
 
 public interface ReconPlanService {
 
-    ReconPlan createDraft(String leftDatasetId, String rightDatasetId, LlmMappingResponse mapping, List<String> warnings);
+    ReconPlan createDraft(
+            String leftDatasetId,
+            String rightDatasetId,
+            LlmMappingResponse mapping,
+            List<String> warnings,
+            String userNotes);
+
+    ReconPlan createEmptyDraft(String leftDatasetId, String rightDatasetId);
 
     ReconPlan getPlan(String planId);
 

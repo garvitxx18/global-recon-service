@@ -44,6 +44,9 @@ public class ReconFieldMapping {
     @Column(name = "sort_order")
     private int sortOrder;
 
+    @Column(nullable = false)
+    private boolean included = true;
+
     public String getId() {
         return id;
     }
@@ -106,5 +109,13 @@ public class ReconFieldMapping {
 
     public void setSortOrder(int sortOrder) {
         this.sortOrder = sortOrder;
+    }
+
+    public boolean isIncluded() {
+        return included;
+    }
+
+    public void setIncluded(boolean included) {
+        this.included = included;
     }
 }

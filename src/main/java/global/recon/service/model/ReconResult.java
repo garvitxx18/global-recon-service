@@ -1,12 +1,22 @@
 package global.recon.service.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.Id;
 import jakarta.persistence.Index;
+import jakarta.persistence.Lob;
 import jakarta.persistence.Table;
+import jakarta.persistence.Transient;
+import tools.jackson.core.type.TypeReference;
+import tools.jackson.databind.json.JsonMapper;
+
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
 
 @Entity
 @Table(name = "recon_result", indexes = {
@@ -35,8 +45,28 @@ public class ReconResult {
     @Column(name = "recon_key")
     private String reconKey;
 
-    @Column(name = "differences", columnDefinition = "TEXT")
+    @Lob
+    @Column(name = "differences")
+    @JsonIgnore
     private String differencesJson;
+
+    @Transient
+    private Map<String, Object> leftPayload = new LinkedHashMap<>();
+
+    @Transient
+    private Map<String, Object> rightPayload = new LinkedHashMap<>();
+
+    @Transient
+    @JsonProperty("differences")
+    public List<ReconDifference> getDifferences() {
+        if (differencesJson == null || differencesJson.isBlank()) {
+            return List.of();
+        }
+        return JSON.readValue(differencesJson, new TypeReference<List<ReconDifference>>() {
+        });
+    }
+
+    private static final JsonMapper JSON = JsonMapper.builder().build();
 
     public String getId() {
         return id;
@@ -86,11 +116,28 @@ public class ReconResult {
         this.reconKey = reconKey;
     }
 
+    @JsonIgnore
     public String getDifferencesJson() {
         return differencesJson;
     }
 
     public void setDifferencesJson(String differencesJson) {
         this.differencesJson = differencesJson;
+    }
+
+    public Map<String, Object> getLeftPayload() {
+        return leftPayload;
+    }
+
+    public void setLeftPayload(Map<String, Object> leftPayload) {
+        this.leftPayload = leftPayload == null ? new LinkedHashMap<>() : leftPayload;
+    }
+
+    public Map<String, Object> getRightPayload() {
+        return rightPayload;
+    }
+
+    public void setRightPayload(Map<String, Object> rightPayload) {
+        this.rightPayload = rightPayload == null ? new LinkedHashMap<>() : rightPayload;
     }
 }

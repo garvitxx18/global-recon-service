@@ -4,6 +4,7 @@ public class DiscoverMappingRequest {
 
     private String leftDatasetId;
     private String rightDatasetId;
+    private String notes;
 
     public String getLeftDatasetId() {
         return leftDatasetId;
@@ -19,5 +20,13 @@ public class DiscoverMappingRequest {
 
     public void setRightDatasetId(String rightDatasetId) {
         this.rightDatasetId = rightDatasetId;
+    }
+
+    public String getNotes() {
+        return notes;
+    }
+
+    public void setNotes(String notes) {
+        this.notes = notes;
     }
 }

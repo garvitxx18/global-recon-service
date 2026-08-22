@@ -4,6 +4,7 @@ import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.Index;
+import jakarta.persistence.Lob;
 import jakarta.persistence.Table;
 
 @Entity
@@ -22,7 +23,8 @@ public class DatasetRecord {
     @Column(name = "row_index", nullable = false)
     private long rowIndex;
 
-    @Column(name = "payload", nullable = false, columnDefinition = "TEXT")
+    @Lob
+    @Column(name = "payload", nullable = false)
     private String payloadJson;
 
     public String getId() {

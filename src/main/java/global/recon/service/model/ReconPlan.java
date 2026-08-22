@@ -7,6 +7,7 @@ import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.Id;
+import jakarta.persistence.Lob;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.OrderBy;
 import jakarta.persistence.Table;
@@ -29,6 +30,13 @@ public class ReconPlan {
     @Column(name = "right_dataset_id", nullable = false, length = 64)
     private String rightDatasetId;
 
+    @Column(name = "owner_email", nullable = false, length = 320)
+    private String ownerEmail;
+
+    @Lob
+    @Column(name = "user_notes")
+    private String userNotes;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 32)
     private ReconPlanStatus status;
@@ -36,7 +44,8 @@ public class ReconPlan {
     @Column(name = "overall_confidence")
     private Double overallConfidence;
 
-    @Column(columnDefinition = "TEXT")
+    @Lob
+    @Column(name = "warnings")
     private String warnings;
 
     @Column(nullable = false)
@@ -74,6 +83,22 @@ public class ReconPlan {
 
     public void setRightDatasetId(String rightDatasetId) {
         this.rightDatasetId = rightDatasetId;
+    }
+
+    public String getOwnerEmail() {
+        return ownerEmail;
+    }
+
+    public void setOwnerEmail(String ownerEmail) {
+        this.ownerEmail = ownerEmail;
+    }
+
+    public String getUserNotes() {
+        return userNotes;
+    }
+
+    public void setUserNotes(String userNotes) {
+        this.userNotes = userNotes;
     }
 
     public ReconPlanStatus getStatus() {

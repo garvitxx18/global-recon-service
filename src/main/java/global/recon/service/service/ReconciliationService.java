@@ -4,7 +4,9 @@ import global.recon.service.model.ReconRun;
 
 public interface ReconciliationService {
 
-    ReconRun run(String reconPlanId);
+    ReconRun submit(String reconPlanId);
+
+    ReconRun execute(String runId);
 
     ReconRun getRun(String runId);
 }

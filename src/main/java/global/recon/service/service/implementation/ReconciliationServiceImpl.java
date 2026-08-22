@@ -1,7 +1,9 @@
 package global.recon.service.service.implementation;
 
 import global.recon.service.config.HazelcastConfig;
+import global.recon.service.config.OwnerAccess;
 import global.recon.service.config.ReconProperties;
+import global.recon.service.config.UserContext;
 import global.recon.service.model.DatasetRecord;
 import global.recon.service.model.ReconDifference;
 import global.recon.service.model.ReconFieldMapping;
@@ -18,10 +20,10 @@ import global.recon.service.service.ReconPlanService;
 import global.recon.service.service.ReconResultService;
 import global.recon.service.service.ReconciliationService;
 import global.recon.service.service.ResourceNotFoundException;
-import global.recon.service.utility.ComparisonUtility;
-import global.recon.service.utility.IdUtility;
-import global.recon.service.utility.JsonCodec;
-import global.recon.service.utility.ReconKeyUtility;
+import global.recon.service.utils.ComparisonUtility;
+import global.recon.service.utils.IdUtility;
+import global.recon.service.utils.JsonCodec;
+import global.recon.service.utils.ReconKeyUtility;
 import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.map.IMap;
 import org.springframework.data.domain.PageRequest;
@@ -71,7 +73,7 @@ public class ReconciliationServiceImpl implements ReconciliationService {
 
     @Override
     @Transactional
-    public ReconRun run(String reconPlanId) {
+    public ReconRun submit(String reconPlanId) {
         ReconPlan plan = reconPlanService.getPlan(reconPlanId);
         if (plan.getStatus() != ReconPlanStatus.APPROVED) {
             throw new InvalidRequestException("Only an approved recon plan can start reconciliation");
@@ -79,6 +81,17 @@ public class ReconciliationServiceImpl implements ReconciliationService {
         ReconRun run = new ReconRun();
         run.setId(IdUtility.runId());
         run.setReconPlanId(plan.getId());
+        run.setOwnerEmail(UserContext.require());
+        run.setStatus(ReconRunStatus.PENDING);
+        run.setStartedAt(Instant.now());
+        return reconRunRepository.save(run);
+    }
+
+    @Override
+    @Transactional
+    public ReconRun execute(String runId) {
+        ReconRun run = getRun(runId);
+        ReconPlan plan = reconPlanService.getPlan(run.getReconPlanId());
         run.setStatus(ReconRunStatus.RUNNING);
         run.setStartedAt(Instant.now());
         reconRunRepository.save(run);
@@ -109,8 +122,10 @@ public class ReconciliationServiceImpl implements ReconciliationService {
     @Override
     @Transactional(readOnly = true)
     public ReconRun getRun(String runId) {
-        return reconRunRepository.findById(runId)
+        ReconRun run = reconRunRepository.findById(runId)
                 .orElseThrow(() -> new ResourceNotFoundException("Recon run not found: " + runId));
+        OwnerAccess.assertOwns(run.getOwnerEmail());
+        return run;
     }
 
     private void indexRightSide(ReconPlan plan, IMap<String, List<String>> index) {
@@ -226,6 +241,9 @@ public class ReconciliationServiceImpl implements ReconciliationService {
     private List<ReconDifference> compare(ReconPlan plan, Map<String, Object> left, Map<String, Object> right) {
         List<ReconDifference> differences = new ArrayList<>();
         for (ReconFieldMapping mapping : plan.getFieldMappings()) {
+            if (!mapping.isIncluded()) {
+                continue;
+            }
             Object leftValue = left.get(mapping.getLeftField());
             Object rightValue = right.get(mapping.getRightField());
             if (!comparisonUtility.matches(leftValue, rightValue, mapping.getMatchType(), mapping.getTolerance())) {

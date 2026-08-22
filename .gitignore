@@ -11,3 +11,10 @@ out/
 .DS_Store
 bin/
 !gradle/wrapper/gradle-wrapper.jar
+application-local.yml
+.env
+.env.local
+data/
+logs/
+ui/node_modules/
+ui/dist/

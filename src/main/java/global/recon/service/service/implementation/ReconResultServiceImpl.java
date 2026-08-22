@@ -1,10 +1,13 @@
 package global.recon.service.service.implementation;
 
+import global.recon.service.model.DatasetRecord;
 import global.recon.service.model.ReconResult;
 import global.recon.service.model.ReconRun;
 import global.recon.service.model.ReconStatus;
+import global.recon.service.repository.DatasetRecordRepository;
 import global.recon.service.repository.ReconResultRepository;
 import global.recon.service.service.ReconResultService;
+import global.recon.service.utils.JsonCodec;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import org.springframework.data.domain.Page;
@@ -12,20 +15,30 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 @Service
 public class ReconResultServiceImpl implements ReconResultService {
 
     private final ReconResultRepository reconResultRepository;
+    private final DatasetRecordRepository datasetRecordRepository;
+    private final JsonCodec jsonCodec;
 
     @PersistenceContext
     private EntityManager entityManager;
 
-    public ReconResultServiceImpl(ReconResultRepository reconResultRepository) {
+    public ReconResultServiceImpl(
+            ReconResultRepository reconResultRepository,
+            DatasetRecordRepository datasetRecordRepository,
+            JsonCodec jsonCodec) {
         this.reconResultRepository = reconResultRepository;
+        this.datasetRecordRepository = datasetRecordRepository;
+        this.jsonCodec = jsonCodec;
     }
 
     @Override
@@ -42,10 +55,36 @@ public class ReconResultServiceImpl implements ReconResultService {
     @Override
     @Transactional(readOnly = true)
     public Page<ReconResult> getResults(String runId, ReconStatus status, Pageable pageable) {
-        if (status == null) {
-            return reconResultRepository.findByRunId(runId, pageable);
+        Page<ReconResult> page = status == null
+                ? reconResultRepository.findByRunId(runId, pageable)
+                : reconResultRepository.findByRunIdAndStatus(runId, status, pageable);
+        hydratePayloads(page.getContent());
+        return page;
+    }
+
+    private void hydratePayloads(List<ReconResult> results) {
+        Set<String> ids = new HashSet<>();
+        for (ReconResult result : results) {
+            if (result.getLeftRecordId() != null) {
+                ids.add(result.getLeftRecordId());
+            }
+            if (result.getRightRecordId() != null) {
+                ids.add(result.getRightRecordId());
+            }
         }
-        return reconResultRepository.findByRunIdAndStatus(runId, status, pageable);
+        if (ids.isEmpty()) {
+            return;
+        }
+        Map<String, DatasetRecord> byId = new HashMap<>();
+        for (DatasetRecord record : datasetRecordRepository.findAllById(ids)) {
+            byId.put(record.getId(), record);
+        }
+        for (ReconResult result : results) {
+            DatasetRecord left = byId.get(result.getLeftRecordId());
+            DatasetRecord right = byId.get(result.getRightRecordId());
+            result.setLeftPayload(left == null ? new LinkedHashMap<>() : jsonCodec.readMap(left.getPayloadJson()));
+            result.setRightPayload(right == null ? new LinkedHashMap<>() : jsonCodec.readMap(right.getPayloadJson()));
+        }
     }
 
     @Override

@@ -8,7 +8,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 
 @FeignClient(
         name = "llmClient",
-        url = "${llm.api.url}",
+        url = "${llm.api.url:http://localhost:9080}",
         configuration = FeignConfig.class
 )
 public interface LlmFeignClient {

@@ -5,6 +5,7 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.Id;
+import jakarta.persistence.Lob;
 import jakarta.persistence.Table;
 
 @Entity
@@ -37,7 +38,8 @@ public class DatasetColumn {
     @Column(name = "unique_ratio")
     private double uniqueRatio;
 
-    @Column(name = "sample_values", columnDefinition = "TEXT")
+    @Lob
+    @Column(name = "sample_values")
     private String sampleValuesJson;
 
     @Column(name = "min_value")
@@ -46,7 +48,8 @@ public class DatasetColumn {
     @Column(name = "max_value")
     private String maximum;
 
-    @Column(name = "common_patterns", columnDefinition = "TEXT")
+    @Lob
+    @Column(name = "common_patterns")
     private String commonPatternsJson;
 
     @Column(name = "ordinal_position")

@@ -6,10 +6,10 @@ import global.recon.service.model.DatasetColumn;
 import global.recon.service.model.DatasetProfile;
 import global.recon.service.repository.DatasetColumnRepository;
 import global.recon.service.service.ProfilingService;
-import global.recon.service.utility.DataTypeUtility;
-import global.recon.service.utility.IdUtility;
-import global.recon.service.utility.JsonCodec;
-import global.recon.service.utility.ProfileUtility;
+import global.recon.service.utils.DataTypeUtility;
+import global.recon.service.utils.IdUtility;
+import global.recon.service.utils.JsonCodec;
+import global.recon.service.utils.ProfileUtility;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 

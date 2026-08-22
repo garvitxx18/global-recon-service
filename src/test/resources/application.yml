@@ -1,6 +1,6 @@
 spring:
   datasource:
-    url: jdbc:h2:mem:global_recon;MODE=MySQL;DB_CLOSE_DELAY=-1;DATABASE_TO_LOWER=TRUE
+    url: jdbc:h2:mem:global_recon;MODE=MSSQLServer;DB_CLOSE_DELAY=-1;DATABASE_TO_LOWER=TRUE
     username: sa
     password:
     driver-class-name: org.h2.Driver
@@ -12,7 +12,12 @@ spring:
         dialect: org.hibernate.dialect.H2Dialect
 
 llm:
+  provider: mock
   mock-enabled: true
+  gemini:
+    base-url: https://generativelanguage.googleapis.com
+    api-key: test-not-used
+    model: gemini-3.6-flash
   api:
     url: http://localhost:9080
     path: /v1/complete

@@ -1,0 +1,12 @@
+{
+  "asOf": "2026-08-20",
+  "book": "EQ",
+  "securityList": [
+    { "isin": "US0378331005", "name": "AAPL" },
+    { "isin": "US5949181045", "name": "MSFT" }
+  ],
+  "tradeList": [
+    { "trade_id": "T001", "security_id": "US0378331005", "quantity": 100, "price": 220.50, "trade_date": "2026-08-20" },
+    { "trade_id": "T002", "security_id": "US5949181045", "quantity": 500, "price": 410.00, "trade_date": "2026-08-20" }
+  ]
+}

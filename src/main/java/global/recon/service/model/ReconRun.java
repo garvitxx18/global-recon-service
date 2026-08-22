@@ -5,12 +5,15 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.Id;
+import jakarta.persistence.Index;
 import jakarta.persistence.Table;
 
 import java.time.Instant;
 
 @Entity
-@Table(name = "recon_run")
+@Table(name = "recon_run", indexes = {
+        @Index(name = "idx_recon_run_owner", columnList = "owner_email")
+})
 public class ReconRun {
 
     @Id
@@ -19,6 +22,9 @@ public class ReconRun {
 
     @Column(name = "recon_plan_id", nullable = false, length = 64)
     private String reconPlanId;
+
+    @Column(name = "owner_email", nullable = false, length = 320)
+    private String ownerEmail;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 32)
@@ -48,6 +54,12 @@ public class ReconRun {
     @Column(name = "processed_count")
     private long processedCount;
 
+    @Column(length = 255)
+    private String name;
+
+    @Column(name = "saved_at")
+    private Instant savedAt;
+
     @Column(length = 1024)
     private String errorMessage;
 
@@ -70,6 +82,14 @@ public class ReconRun {
 
     public void setReconPlanId(String reconPlanId) {
         this.reconPlanId = reconPlanId;
+    }
+
+    public String getOwnerEmail() {
+        return ownerEmail;
+    }
+
+    public void setOwnerEmail(String ownerEmail) {
+        this.ownerEmail = ownerEmail;
     }
 
     public ReconRunStatus getStatus() {
@@ -142,6 +162,22 @@ public class ReconRun {
 
     public void setProcessedCount(long processedCount) {
         this.processedCount = processedCount;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public Instant getSavedAt() {
+        return savedAt;
+    }
+
+    public void setSavedAt(Instant savedAt) {
+        this.savedAt = savedAt;
     }
 
     public String getErrorMessage() {

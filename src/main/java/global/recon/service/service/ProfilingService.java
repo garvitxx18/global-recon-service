@@ -2,7 +2,7 @@ package global.recon.service.service;
 
 import global.recon.service.model.Dataset;
 import global.recon.service.model.DatasetProfile;
-import global.recon.service.utility.ProfileUtility;
+import global.recon.service.utils.ProfileUtility;
 
 import java.util.Map;
 

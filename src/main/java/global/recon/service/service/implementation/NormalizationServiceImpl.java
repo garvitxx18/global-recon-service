@@ -6,13 +6,13 @@ import global.recon.service.model.DatasetRecord;
 import global.recon.service.repository.DatasetRecordRepository;
 import global.recon.service.service.InvalidRequestException;
 import global.recon.service.service.NormalizationService;
-import global.recon.service.utility.CsvUtility;
-import global.recon.service.utility.IdUtility;
-import global.recon.service.utility.JsonCodec;
-import global.recon.service.utility.JsonUtility;
-import global.recon.service.utility.ProfileUtility;
-import global.recon.service.utility.RowCallback;
-import global.recon.service.utility.XlsxUtility;
+import global.recon.service.utils.CsvUtility;
+import global.recon.service.utils.IdUtility;
+import global.recon.service.utils.JsonCodec;
+import global.recon.service.utils.JsonUtility;
+import global.recon.service.utils.ProfileUtility;
+import global.recon.service.utils.RowCallback;
+import global.recon.service.utils.XlsxUtility;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import org.springframework.stereotype.Service;
@@ -78,7 +78,7 @@ public class NormalizationServiceImpl implements NormalizationService {
         try {
             switch (dataset.getFormat()) {
                 case CSV -> csvUtility.streamRows(inputStream, callback);
-                case JSON -> jsonUtility.streamRows(inputStream, callback);
+                case JSON -> jsonUtility.streamRows(inputStream, dataset.getRecordPath(), callback);
                 case XLSX -> xlsxUtility.streamRows(inputStream, callback);
             }
         } catch (InvalidRequestException ex) {

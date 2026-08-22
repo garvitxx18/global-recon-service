@@ -1,11 +1,14 @@
 package global.recon.service.controller;
 
 import global.recon.service.model.CreateReconRunRequest;
+import global.recon.service.model.ReconJob;
 import global.recon.service.model.ReconResult;
 import global.recon.service.model.ReconRun;
 import global.recon.service.model.ReconStatus;
+import global.recon.service.service.JobQueueService;
 import global.recon.service.service.ReconResultService;
 import global.recon.service.service.ReconciliationService;
+import io.swagger.v3.oas.annotations.Operation;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
@@ -27,16 +30,22 @@ public class ReconRunController {
 
     private final ReconciliationService reconciliationService;
     private final ReconResultService reconResultService;
+    private final JobQueueService jobQueueService;
 
-    public ReconRunController(ReconciliationService reconciliationService, ReconResultService reconResultService) {
+    public ReconRunController(
+            ReconciliationService reconciliationService,
+            ReconResultService reconResultService,
+            JobQueueService jobQueueService) {
         this.reconciliationService = reconciliationService;
         this.reconResultService = reconResultService;
+        this.jobQueueService = jobQueueService;
     }
 
+    @Operation(summary = "Queue a reconciliation run", description = "Returns a job immediately. Poll GET /api/v1/jobs/{jobId} until COMPLETED, then use resultId as the run id.")
     @PostMapping
-    @ResponseStatus(HttpStatus.CREATED)
-    public ReconRun create(@RequestBody CreateReconRunRequest request) {
-        return reconciliationService.run(request.getReconPlanId());
+    @ResponseStatus(HttpStatus.ACCEPTED)
+    public ReconJob create(@RequestBody CreateReconRunRequest request) {
+        return jobQueueService.enqueueReconRun(request.getReconPlanId());
     }
 
     @GetMapping("/{runId}")

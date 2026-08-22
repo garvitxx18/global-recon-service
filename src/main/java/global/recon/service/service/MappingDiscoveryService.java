@@ -4,5 +4,5 @@ import global.recon.service.model.ReconPlan;
 
 public interface MappingDiscoveryService {
 
-    ReconPlan discover(String leftDatasetId, String rightDatasetId);
+    ReconPlan discover(String leftDatasetId, String rightDatasetId, String userNotes);
 }
