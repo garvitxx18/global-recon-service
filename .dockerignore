@@ -1,0 +1,15 @@
+.git
+.github
+.gradle
+.idea
+.vscode
+build
+data
+logs
+ui
+*.iml
+*.log
+.env
+.env.local
+src/main/resources/application-local.yml
+.DS_Store

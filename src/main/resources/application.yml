@@ -2,10 +2,12 @@ spring:
   application:
     name: global-recon-service
   datasource:
-    url: jdbc:h2:file:./data/global_recon;MODE=PostgreSQL;AUTO_SERVER=TRUE;DB_CLOSE_DELAY=-1
-    username: sa
-    password:
-    driver-class-name: org.h2.Driver
+    url: ${DB_URL:jdbc:h2:file:./data/global_recon;MODE=PostgreSQL;AUTO_SERVER=TRUE;DB_CLOSE_DELAY=-1}
+    username: ${DB_USERNAME:sa}
+    password: ${DB_PASSWORD:}
+    driver-class-name: ${DB_DRIVER:org.h2.Driver}
+    hikari:
+      maximum-pool-size: ${DB_POOL_SIZE:10}
   h2:
     console:
       enabled: true
@@ -16,7 +18,6 @@ spring:
     open-in-view: false
     properties:
       hibernate:
-        dialect: org.hibernate.dialect.H2Dialect
         jdbc:
           batch_size: 50
         order_inserts: true
@@ -39,7 +40,7 @@ spring:
             logger-level: basic
 
 server:
-  port: 8080
+  port: ${PORT:8080}
 
 management:
   endpoints:
@@ -70,7 +71,31 @@ recon:
   queue-workers: 4
 
 logging:
-  file:
-    name: logs/global-recon.log
   level:
     global.recon.service.feignclient.GeminiClient: INFO
+
+---
+spring:
+  config:
+    activate:
+      on-profile: local
+llm:
+  provider: mock
+  mock-enabled: true
+recon:
+  dev-default-email: tester@company.com
+logging:
+  file:
+    name: logs/global-recon.log
+
+---
+spring:
+  config:
+    activate:
+      on-profile: cloud
+  h2:
+    console:
+      enabled: false
+llm:
+  provider: mock
+  mock-enabled: true
