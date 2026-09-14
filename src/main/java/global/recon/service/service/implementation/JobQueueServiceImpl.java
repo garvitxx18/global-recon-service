@@ -62,8 +62,7 @@ public class JobQueueServiceImpl implements JobQueueService {
         }
         job.setNotes(trimmed);
         reconJobRepository.save(job);
-        offer(job.getId());
-        return job;
+        return runNow(job.getId());
     }
 
     @Override
@@ -73,8 +72,7 @@ public class JobQueueServiceImpl implements JobQueueService {
         job.setReconPlanId(reconPlanId);
         job.setResultId(run.getId());
         reconJobRepository.save(job);
-        offer(job.getId());
-        return job;
+        return runNow(job.getId());
     }
 
     @Override
@@ -113,6 +111,7 @@ public class JobQueueServiceImpl implements JobQueueService {
         job.setStatus(JobStatus.RUNNING);
         job.setStartedAt(Instant.now());
         reconJobRepository.save(job);
+        String previousEmail = UserContext.get();
         try {
             UserContext.set(job.getOwnerEmail());
             if (job.getType() == JobType.MAPPING_DISCOVERY) {
@@ -132,8 +131,18 @@ public class JobQueueServiceImpl implements JobQueueService {
             job.setCompletedAt(Instant.now());
             reconJobRepository.save(job);
         } finally {
-            UserContext.clear();
+            if (previousEmail == null || previousEmail.isBlank()) {
+                UserContext.clear();
+            } else {
+                UserContext.set(previousEmail);
+            }
         }
+    }
+
+    private ReconJob runNow(String jobId) {
+        process(jobId);
+        return reconJobRepository.findById(jobId)
+                .orElseThrow(() -> new ResourceNotFoundException("Job not found: " + jobId));
     }
 
     @Override

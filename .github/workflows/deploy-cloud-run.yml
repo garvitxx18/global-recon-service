@@ -79,7 +79,7 @@ jobs:
           service: global-recon-service
           region: ${{ secrets.GCP_REGION }}
           image: ${{ secrets.GCP_REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/adk-agents/global-recon-service:${{ github.sha }}
-          flags: --port=8080 --memory=2Gi --cpu=2 --min-instances=0 --max-instances=2 --timeout=3600 --no-cpu-throttling --allow-unauthenticated
+          flags: --port=8080 --memory=2Gi --cpu=2 --min-instances=1 --max-instances=2 --timeout=3600 --no-cpu-throttling --allow-unauthenticated
           env_vars: |
             SPRING_PROFILES_ACTIVE=cloud
             DB_URL=${{ secrets.DB_URL }}
