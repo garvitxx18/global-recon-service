@@ -16,5 +16,4 @@ application-local.yml
 .env.local
 data/
 logs/
-ui/node_modules/
-ui/dist/
+ui/

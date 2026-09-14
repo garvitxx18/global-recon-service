@@ -14,9 +14,11 @@ import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.asyncDispatch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.request;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @SpringBootTest
@@ -90,6 +92,20 @@ class ReconPipelineIT {
                 .andExpect(status().isOk());
         mockMvc.perform(get("/api/v1/recon-runs/" + runId + "/results").param("status", "BREAK").with(asUser(USER)))
                 .andExpect(status().isOk());
+
+        MvcResult exportStart = mockMvc.perform(get("/api/v1/recon-runs/" + runId + "/export").with(asUser(USER)))
+                .andExpect(request().asyncStarted())
+                .andReturn();
+        MvcResult export = mockMvc.perform(asyncDispatch(exportStart))
+                .andExpect(status().isOk())
+                .andReturn();
+        String csv = export.getResponse().getContentAsString();
+        assertThat(export.getResponse().getContentType()).contains("text/csv");
+        assertThat(export.getResponse().getHeader("Content-Disposition")).contains("break-report-");
+        assertThat(csv).contains("status,recon_key,left_field,right_field,left_value,right_value");
+        assertThat(csv).contains("BREAK");
+        mockMvc.perform(get("/api/v1/recon-runs/" + runId + "/export").with(asUser(OTHER)))
+                .andExpect(status().isNotFound());
 
         mockMvc.perform(get("/api/v1/datasets/" + leftId + "/records").with(asUser(USER)))
                         .andExpect(status().isOk());

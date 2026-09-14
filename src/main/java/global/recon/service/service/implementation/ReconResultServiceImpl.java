@@ -7,14 +7,20 @@ import global.recon.service.model.ReconStatus;
 import global.recon.service.repository.DatasetRecordRepository;
 import global.recon.service.repository.ReconResultRepository;
 import global.recon.service.service.ReconResultService;
+import global.recon.service.utils.BreakReportCsv;
 import global.recon.service.utils.JsonCodec;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
+import org.apache.commons.csv.CSVPrinter;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.io.IOException;
+import java.io.OutputStream;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
@@ -96,5 +102,28 @@ public class ReconResultServiceImpl implements ReconResultService {
         }
         summary.put("PROCESSED", run.getProcessedCount());
         return summary;
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public void writeCsvExport(String runId, ReconStatus status, OutputStream output) throws IOException {
+        int page = 0;
+        int size = 500;
+        try (CSVPrinter printer = BreakReportCsv.open(output)) {
+            while (true) {
+                Pageable pageable = PageRequest.of(page, size, Sort.by("id").ascending());
+                Page<ReconResult> chunk = status == null
+                        ? reconResultRepository.findByRunId(runId, pageable)
+                        : reconResultRepository.findByRunIdAndStatus(runId, status, pageable);
+                for (ReconResult result : chunk.getContent()) {
+                    BreakReportCsv.writeResult(printer, result);
+                }
+                if (!chunk.hasNext()) {
+                    break;
+                }
+                page++;
+            }
+            printer.flush();
+        }
     }
 }
