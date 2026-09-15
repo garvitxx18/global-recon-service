@@ -87,3 +87,4 @@ jobs:
             DB_PASSWORD=${{ secrets.DB_PASSWORD }}
             DB_DRIVER=org.postgresql.Driver
             DB_POOL_SIZE=5
+            AGENT_BASE_URL=https://global-recon-agent-869596149274.us-central1.run.app

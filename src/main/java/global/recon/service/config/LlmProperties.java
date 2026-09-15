@@ -9,6 +9,7 @@ public class LlmProperties {
     private boolean mockEnabled = false;
     private Api api = new Api();
     private Gemini gemini = new Gemini();
+    private Agent agent = new Agent();
 
     public String getProvider() {
         return provider;
@@ -42,8 +43,20 @@ public class LlmProperties {
         this.gemini = gemini;
     }
 
+    public Agent getAgent() {
+        return agent;
+    }
+
+    public void setAgent(Agent agent) {
+        this.agent = agent;
+    }
+
     public boolean hasGeminiKey() {
         return gemini != null && gemini.getApiKey() != null && !gemini.getApiKey().isBlank();
+    }
+
+    public boolean hasAgentUrl() {
+        return agent != null && agent.getBaseUrl() != null && !agent.getBaseUrl().isBlank();
     }
 
     public String resolvedProvider() {
@@ -52,6 +65,9 @@ public class LlmProperties {
         }
         String value = provider == null ? "mock" : provider.trim().toLowerCase();
         if ("gemini".equals(value) && !hasGeminiKey()) {
+            return "mock";
+        }
+        if ("agent".equals(value) && !hasAgentUrl()) {
             return "mock";
         }
         return value;
@@ -105,6 +121,27 @@ public class LlmProperties {
 
         public void setModel(String model) {
             this.model = model;
+        }
+    }
+
+    public static class Agent {
+        private String baseUrl = "";
+        private String appName = "global_recon";
+
+        public String getBaseUrl() {
+            return baseUrl;
+        }
+
+        public void setBaseUrl(String baseUrl) {
+            this.baseUrl = baseUrl;
+        }
+
+        public String getAppName() {
+            return appName;
+        }
+
+        public void setAppName(String appName) {
+            this.appName = appName;
         }
     }
 }

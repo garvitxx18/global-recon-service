@@ -1,6 +1,7 @@
 package global.recon.service.service.implementation;
 
 import global.recon.service.config.LlmProperties;
+import global.recon.service.feignclient.AdkClient;
 import global.recon.service.feignclient.GeminiClient;
 import global.recon.service.feignclient.LlmFeignClient;
 import global.recon.service.model.ColumnProfile;
@@ -40,6 +41,7 @@ public class MappingDiscoveryServiceImpl implements MappingDiscoveryService {
     private final LlmProperties llmProperties;
     private final ObjectProvider<LlmFeignClient> llmFeignClient;
     private final GeminiClient geminiClient;
+    private final AdkClient adkClient;
 
     public MappingDiscoveryServiceImpl(
             DatasetService datasetService,
@@ -50,7 +52,8 @@ public class MappingDiscoveryServiceImpl implements MappingDiscoveryService {
             ReconPlanService reconPlanService,
             LlmProperties llmProperties,
             ObjectProvider<LlmFeignClient> llmFeignClient,
-            GeminiClient geminiClient) {
+            GeminiClient geminiClient,
+            AdkClient adkClient) {
         this.datasetService = datasetService;
         this.profilingService = profilingService;
         this.llmPromptUtility = llmPromptUtility;
@@ -60,6 +63,7 @@ public class MappingDiscoveryServiceImpl implements MappingDiscoveryService {
         this.llmProperties = llmProperties;
         this.llmFeignClient = llmFeignClient;
         this.geminiClient = geminiClient;
+        this.adkClient = adkClient;
     }
 
     @Override
@@ -120,6 +124,9 @@ public class MappingDiscoveryServiceImpl implements MappingDiscoveryService {
             String userNotes) {
         String prompt = llmPromptUtility.buildPrompt(left, right, leftDataset, rightDataset, userNotes);
         String provider = llmProperties.resolvedProvider();
+        if ("agent".equals(provider)) {
+            return adkClient.complete(prompt);
+        }
         if ("gemini".equals(provider)) {
             return invokeGemini(prompt);
         }
