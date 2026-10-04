@@ -6,9 +6,17 @@ import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.Id;
 import jakarta.persistence.Index;
+import jakarta.persistence.Lob;
 import jakarta.persistence.Table;
 
+import jakarta.persistence.Transient;
+
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 import java.time.Instant;
+import java.util.LinkedHashMap;
+import java.util.Map;
 
 @Entity
 @Table(name = "dataset", indexes = {
@@ -48,6 +56,18 @@ public class Dataset {
 
     @Column(name = "record_path", length = 255)
     private String recordPath;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "source_kind", nullable = false, length = 16)
+    private DatasetSourceKind sourceKind = DatasetSourceKind.FILE;
+
+    @Column(name = "source_id", length = 64)
+    private String sourceId;
+
+    @Lob
+    @JsonIgnore
+    @Column(name = "source_params_json")
+    private String sourceParamsJson;
 
     @Column(nullable = false)
     private Instant createdAt;
@@ -133,6 +153,45 @@ public class Dataset {
 
     public void setRecordPath(String recordPath) {
         this.recordPath = recordPath;
+    }
+
+    public DatasetSourceKind getSourceKind() {
+        return sourceKind;
+    }
+
+    public void setSourceKind(DatasetSourceKind sourceKind) {
+        this.sourceKind = sourceKind;
+    }
+
+    public String getSourceId() {
+        return sourceId;
+    }
+
+    public void setSourceId(String sourceId) {
+        this.sourceId = sourceId;
+    }
+
+    public String getSourceParamsJson() {
+        return sourceParamsJson;
+    }
+
+    public void setSourceParamsJson(String sourceParamsJson) {
+        this.sourceParamsJson = sourceParamsJson;
+    }
+
+    @Transient
+    @JsonProperty("sourceParams")
+    public Map<String, Object> getSourceParams() {
+        if (sourceParamsJson == null || sourceParamsJson.isBlank()) {
+            return new LinkedHashMap<>();
+        }
+        try {
+            @SuppressWarnings("unchecked")
+            Map<String, Object> parsed = new tools.jackson.databind.json.JsonMapper().readValue(sourceParamsJson, Map.class);
+            return parsed == null ? new LinkedHashMap<>() : parsed;
+        } catch (Exception ex) {
+            return new LinkedHashMap<>();
+        }
     }
 
     public Instant getCreatedAt() {

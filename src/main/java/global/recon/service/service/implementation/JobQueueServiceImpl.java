@@ -9,6 +9,7 @@ import global.recon.service.model.ReconJob;
 import global.recon.service.model.ReconPlan;
 import global.recon.service.model.ReconRun;
 import global.recon.service.repository.ReconJobRepository;
+import global.recon.service.service.CollectionExecutionService;
 import global.recon.service.service.InvalidRequestException;
 import global.recon.service.service.JobQueueService;
 import global.recon.service.service.MappingDiscoveryService;
@@ -21,6 +22,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -35,16 +37,19 @@ public class JobQueueServiceImpl implements JobQueueService {
     private final ReconJobRepository reconJobRepository;
     private final MappingDiscoveryService mappingDiscoveryService;
     private final ReconciliationService reconciliationService;
+    private final CollectionExecutionService collectionExecutionService;
     private final HazelcastInstance hazelcastInstance;
 
     public JobQueueServiceImpl(
             ReconJobRepository reconJobRepository,
             MappingDiscoveryService mappingDiscoveryService,
             ReconciliationService reconciliationService,
+            @Lazy CollectionExecutionService collectionExecutionService,
             HazelcastInstance hazelcastInstance) {
         this.reconJobRepository = reconJobRepository;
         this.mappingDiscoveryService = mappingDiscoveryService;
         this.reconciliationService = reconciliationService;
+        this.collectionExecutionService = collectionExecutionService;
         this.hazelcastInstance = hazelcastInstance;
     }
 
@@ -72,6 +77,27 @@ public class JobQueueServiceImpl implements JobQueueService {
         ReconJob job = newJob(JobType.RECON_RUN);
         job.setReconPlanId(reconPlanId);
         job.setResultId(run.getId());
+        reconJobRepository.save(job);
+        offer(job.getId());
+        return job;
+    }
+
+    @Override
+    public ReconJob enqueueCollectionCycle(String cycleId, String ownerEmail) {
+        ReconJob job = newJob(JobType.COLLECTION_CYCLE, ownerEmail);
+        job.setCollectionCycleId(cycleId);
+        job.setResultId(cycleId);
+        reconJobRepository.save(job);
+        offer(job.getId());
+        return job;
+    }
+
+    @Override
+    public ReconJob enqueueCollectionItem(String itemId, String cycleId, String ownerEmail) {
+        ReconJob job = newJob(JobType.COLLECTION_ITEM, ownerEmail);
+        job.setCollectionItemId(itemId);
+        job.setCollectionCycleId(cycleId);
+        job.setResultId(itemId);
         reconJobRepository.save(job);
         offer(job.getId());
         return job;
@@ -121,6 +147,10 @@ public class JobQueueServiceImpl implements JobQueueService {
                 job.setResultId(plan.getId());
             } else if (job.getType() == JobType.RECON_RUN) {
                 reconciliationService.execute(job.getResultId());
+            } else if (job.getType() == JobType.COLLECTION_CYCLE) {
+                collectionExecutionService.spawnItems(job.getCollectionCycleId());
+            } else if (job.getType() == JobType.COLLECTION_ITEM) {
+                collectionExecutionService.runItem(job.getCollectionItemId());
             }
             job.setStatus(JobStatus.COMPLETED);
             job.setCompletedAt(Instant.now());
@@ -160,11 +190,15 @@ public class JobQueueServiceImpl implements JobQueueService {
     }
 
     private ReconJob newJob(JobType type) {
+        return newJob(type, UserContext.require());
+    }
+
+    private ReconJob newJob(JobType type, String ownerEmail) {
         ReconJob job = new ReconJob();
         job.setId(IdUtility.jobId());
         job.setType(type);
         job.setStatus(JobStatus.QUEUED);
-        job.setOwnerEmail(UserContext.require());
+        job.setOwnerEmail(ownerEmail);
         job.setCreatedAt(Instant.now());
         return job;
     }

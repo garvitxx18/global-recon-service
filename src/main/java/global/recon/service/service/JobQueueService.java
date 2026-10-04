@@ -11,6 +11,10 @@ public interface JobQueueService {
 
     ReconJob enqueueReconRun(String reconPlanId);
 
+    ReconJob enqueueCollectionCycle(String cycleId, String ownerEmail);
+
+    ReconJob enqueueCollectionItem(String itemId, String cycleId, String ownerEmail);
+
     ReconJob getJob(String jobId);
 
     Page<ReconJob> listJobs(JobStatus status, Pageable pageable);

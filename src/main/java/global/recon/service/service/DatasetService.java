@@ -9,10 +9,18 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
+import java.util.Map;
 
 public interface DatasetService {
 
     Dataset uploadDataset(MultipartFile file, String name, String ingestionNotes, String recordPath);
+
+    Dataset ingestFromSource(
+            String sourceId,
+            Map<String, String> params,
+            String name,
+            String recordPath,
+            byte[] jsonBody);
 
     Dataset getDataset(String datasetId);
 

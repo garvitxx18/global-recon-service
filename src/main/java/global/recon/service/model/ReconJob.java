@@ -57,6 +57,12 @@ public class ReconJob {
 
     private Instant completedAt;
 
+    @Column(name = "collection_cycle_id", length = 64)
+    private String collectionCycleId;
+
+    @Column(name = "collection_item_id", length = 64)
+    private String collectionItemId;
+
     public String getId() {
         return id;
     }
@@ -159,5 +165,21 @@ public class ReconJob {
 
     public void setCompletedAt(Instant completedAt) {
         this.completedAt = completedAt;
+    }
+
+    public String getCollectionCycleId() {
+        return collectionCycleId;
+    }
+
+    public void setCollectionCycleId(String collectionCycleId) {
+        this.collectionCycleId = collectionCycleId;
+    }
+
+    public String getCollectionItemId() {
+        return collectionItemId;
+    }
+
+    public void setCollectionItemId(String collectionItemId) {
+        this.collectionItemId = collectionItemId;
     }
 }

@@ -3,6 +3,7 @@ package global.recon.service.controller;
 import global.recon.service.service.InvalidRequestException;
 import global.recon.service.service.LlmDiscoveryException;
 import global.recon.service.service.ResourceNotFoundException;
+import global.recon.service.service.SourceFetchException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -26,6 +27,11 @@ public class RestExceptionHandler {
     @ExceptionHandler(LlmDiscoveryException.class)
     public ResponseEntity<Map<String, String>> discoveryFailed(LlmDiscoveryException ex) {
         return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY).body(error("DISCOVERY_FAILED", ex.getMessage()));
+    }
+
+    @ExceptionHandler(SourceFetchException.class)
+    public ResponseEntity<Map<String, String>> sourceFetchFailed(SourceFetchException ex) {
+        return ResponseEntity.status(HttpStatus.BAD_GATEWAY).body(error("SOURCE_FETCH_FAILED", ex.getMessage()));
     }
 
     @ExceptionHandler(Exception.class)

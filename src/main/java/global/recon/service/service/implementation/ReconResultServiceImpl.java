@@ -6,7 +6,9 @@ import global.recon.service.model.ReconRun;
 import global.recon.service.model.ReconStatus;
 import global.recon.service.repository.DatasetRecordRepository;
 import global.recon.service.repository.ReconResultRepository;
+import global.recon.service.repository.ReconRunRepository;
 import global.recon.service.service.ReconResultService;
+import global.recon.service.service.ResourceNotFoundException;
 import global.recon.service.utils.JsonCodec;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
@@ -27,6 +29,7 @@ public class ReconResultServiceImpl implements ReconResultService {
 
     private final ReconResultRepository reconResultRepository;
     private final DatasetRecordRepository datasetRecordRepository;
+    private final ReconRunRepository reconRunRepository;
     private final JsonCodec jsonCodec;
 
     @PersistenceContext
@@ -35,9 +38,11 @@ public class ReconResultServiceImpl implements ReconResultService {
     public ReconResultServiceImpl(
             ReconResultRepository reconResultRepository,
             DatasetRecordRepository datasetRecordRepository,
+            ReconRunRepository reconRunRepository,
             JsonCodec jsonCodec) {
         this.reconResultRepository = reconResultRepository;
         this.datasetRecordRepository = datasetRecordRepository;
+        this.reconRunRepository = reconRunRepository;
         this.jsonCodec = jsonCodec;
     }
 
@@ -96,5 +101,13 @@ public class ReconResultServiceImpl implements ReconResultService {
         }
         summary.put("PROCESSED", run.getProcessedCount());
         return summary;
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Map<String, Long> summarizeByRunId(String runId) {
+        ReconRun run = reconRunRepository.findById(runId)
+                .orElseThrow(() -> new ResourceNotFoundException("Run not found: " + runId));
+        return summarize(run);
     }
 }

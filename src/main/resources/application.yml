@@ -68,6 +68,20 @@ llm:
 recon:
   chunk-size: 10000
   queue-workers: 4
+  retention:
+    enabled: true
+    keep-days: 7
+    cron: "0 0 2 * * *"
+    zone: Asia/Kolkata
+    batch-size: 50
+  sources:
+    allow-http: true
+    max-body-bytes: 20971520
+    default-max-concurrent: 2
+    connect-timeout-ms: 10000
+    read-timeout-ms: 90000
+    allowed-host-suffixes: []
+    # Company laptop: set allow-http: false and list vendor host suffixes, e.g. blackrock.com
 
 logging:
   file:

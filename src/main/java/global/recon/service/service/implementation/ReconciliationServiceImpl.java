@@ -81,9 +81,20 @@ public class ReconciliationServiceImpl implements ReconciliationService {
         ReconRun run = new ReconRun();
         run.setId(IdUtility.runId());
         run.setReconPlanId(plan.getId());
+        run.setLeftDatasetId(plan.getLeftDatasetId());
+        run.setRightDatasetId(plan.getRightDatasetId());
         run.setOwnerEmail(UserContext.require());
         run.setStatus(ReconRunStatus.PENDING);
         run.setStartedAt(Instant.now());
+        return reconRunRepository.save(run);
+    }
+
+    @Override
+    @Transactional
+    public ReconRun submit(String reconPlanId, String leftDatasetId, String rightDatasetId) {
+        ReconRun run = submit(reconPlanId);
+        run.setLeftDatasetId(leftDatasetId);
+        run.setRightDatasetId(rightDatasetId);
         return reconRunRepository.save(run);
     }
 
@@ -100,7 +111,7 @@ public class ReconciliationServiceImpl implements ReconciliationService {
         IMap<String, List<String>> index = hazelcastInstance.getMap(indexMapName);
         IMap<String, Long> progress = hazelcastInstance.getMap(HazelcastConfig.RECON_PROGRESS_MAP);
         try {
-            indexRightSide(plan, index);
+            indexRightSide(plan, run, index);
             Counters counters = processLeftSide(plan, run, index, progress);
             processUnusedRight(run, index, counters);
             applyCounters(run, counters);
@@ -128,11 +139,12 @@ public class ReconciliationServiceImpl implements ReconciliationService {
         return run;
     }
 
-    private void indexRightSide(ReconPlan plan, IMap<String, List<String>> index) {
+    private void indexRightSide(ReconPlan plan, ReconRun run, IMap<String, List<String>> index) {
         int page = 0;
+        String rightDatasetId = firstNonBlank(run.getRightDatasetId(), plan.getRightDatasetId());
         while (true) {
             var batch = datasetRecordRepository.findByDatasetIdOrderByRowIndexAsc(
-                    plan.getRightDatasetId(), PageRequest.of(page, reconProperties.getChunkSize()));
+                    rightDatasetId, PageRequest.of(page, reconProperties.getChunkSize()));
             if (batch.isEmpty()) {
                 break;
             }
@@ -161,7 +173,8 @@ public class ReconciliationServiceImpl implements ReconciliationService {
         int page = 0;
         while (true) {
             var batch = datasetRecordRepository.findByDatasetIdOrderByRowIndexAsc(
-                    plan.getLeftDatasetId(), PageRequest.of(page, reconProperties.getChunkSize()));
+                    firstNonBlank(run.getLeftDatasetId(), plan.getLeftDatasetId()),
+                    PageRequest.of(page, reconProperties.getChunkSize()));
             if (batch.isEmpty()) {
                 break;
             }
@@ -302,5 +315,12 @@ public class ReconciliationServiceImpl implements ReconciliationService {
         private long duplicateRight;
         private long ambiguous;
         private long processed;
+    }
+
+    private static String firstNonBlank(String preferred, String fallback) {
+        if (preferred != null && !preferred.isBlank()) {
+            return preferred;
+        }
+        return fallback;
     }
 }

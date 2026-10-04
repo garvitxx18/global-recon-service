@@ -16,10 +16,15 @@ CREATE TABLE IF NOT EXISTS dataset (
     owner_email         VARCHAR(320) NOT NULL,
     ingestion_notes     VARCHAR(4000),
     record_path         VARCHAR(255),
+    source_kind         VARCHAR(16)  NOT NULL DEFAULT 'FILE',
+    source_id           VARCHAR(64),
+    source_params_json  JSON,
     created_at          DATETIME(6)  NOT NULL,
     updated_at          DATETIME(6)  NOT NULL,
     PRIMARY KEY (id),
-    KEY idx_dataset_owner (owner_email)
+    KEY idx_dataset_owner (owner_email),
+    KEY idx_dataset_source (source_id),
+    KEY idx_dataset_created (created_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE IF NOT EXISTS dataset_record (
@@ -111,6 +116,8 @@ CREATE TABLE IF NOT EXISTS recon_job (
     created_at       DATETIME(6)  NOT NULL,
     started_at       DATETIME(6),
     completed_at     DATETIME(6),
+    collection_cycle_id VARCHAR(64),
+    collection_item_id  VARCHAR(64),
     PRIMARY KEY (id),
     KEY idx_recon_job_status (status),
     KEY idx_recon_job_owner (owner_email)
@@ -119,6 +126,8 @@ CREATE TABLE IF NOT EXISTS recon_job (
 CREATE TABLE IF NOT EXISTS recon_run (
     id                    VARCHAR(64)  NOT NULL,
     recon_plan_id         VARCHAR(64)  NOT NULL,
+    left_dataset_id       VARCHAR(64),
+    right_dataset_id      VARCHAR(64),
     owner_email           VARCHAR(320) NOT NULL,
     status                VARCHAR(32)  NOT NULL,
     matched_count         BIGINT,
@@ -153,4 +162,107 @@ CREATE TABLE IF NOT EXISTS recon_result (
     KEY idx_recon_result_run_status (run_id, status),
     CONSTRAINT fk_recon_result_run
         FOREIGN KEY (run_id) REFERENCES recon_run (id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS source (
+    id                 VARCHAR(64)  NOT NULL,
+    name               VARCHAR(255) NOT NULL,
+    vendor             VARCHAR(128) NOT NULL,
+    base_url           VARCHAR(512) NOT NULL,
+    path               VARCHAR(255) NOT NULL,
+    http_method        VARCHAR(8)   NOT NULL,
+    param_schema_json  JSON         NOT NULL,
+    record_path        VARCHAR(255),
+    secret_ref         VARCHAR(128),
+    auth_type          VARCHAR(16)  NOT NULL DEFAULT 'NONE',
+    auth_header        VARCHAR(64),
+    max_concurrent     INT          NOT NULL DEFAULT 2,
+    enabled            TINYINT(1)   NOT NULL DEFAULT 1,
+    created_at         DATETIME(6)  NOT NULL,
+    updated_at         DATETIME(6)  NOT NULL,
+    PRIMARY KEY (id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS collection (
+    id                    VARCHAR(64)  NOT NULL,
+    name                  VARCHAR(255) NOT NULL,
+    owner_email           VARCHAR(320) NOT NULL,
+    plan_id               VARCHAR(64)  NOT NULL,
+    left_source_id        VARCHAR(64)  NOT NULL,
+    right_source_id       VARCHAR(64)  NOT NULL,
+    left_identity_param   VARCHAR(64)  NOT NULL,
+    right_identity_param  VARCHAR(64)  NOT NULL,
+    left_date_param       VARCHAR(64)  NOT NULL,
+    right_date_param      VARCHAR(64)  NOT NULL,
+    constant_params_json  JSON,
+    date_policy           VARCHAR(16)  NOT NULL,
+    schedule_cron         VARCHAR(64),
+    created_at            DATETIME(6)  NOT NULL,
+    updated_at            DATETIME(6)  NOT NULL,
+    PRIMARY KEY (id),
+    KEY idx_collection_owner (owner_email),
+    CONSTRAINT fk_collection_plan FOREIGN KEY (plan_id) REFERENCES recon_plan (id),
+    CONSTRAINT fk_collection_left_source FOREIGN KEY (left_source_id) REFERENCES source (id),
+    CONSTRAINT fk_collection_right_source FOREIGN KEY (right_source_id) REFERENCES source (id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS collection_member (
+    id             VARCHAR(64)  NOT NULL,
+    collection_id  VARCHAR(64)  NOT NULL,
+    email          VARCHAR(320) NOT NULL,
+    role           VARCHAR(16)  NOT NULL,
+    PRIMARY KEY (id),
+    UNIQUE KEY uq_collection_member (collection_id, email),
+    CONSTRAINT fk_collection_member_collection FOREIGN KEY (collection_id) REFERENCES collection (id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS collection_pair (
+    id             VARCHAR(64)  NOT NULL,
+    collection_id  VARCHAR(64)  NOT NULL,
+    left_value     VARCHAR(128) NOT NULL,
+    right_value    VARCHAR(128) NOT NULL,
+    sort_order     INT,
+    PRIMARY KEY (id),
+    UNIQUE KEY uq_collection_pair_left (collection_id, left_value),
+    UNIQUE KEY uq_collection_pair_right (collection_id, right_value),
+    CONSTRAINT fk_collection_pair_collection FOREIGN KEY (collection_id) REFERENCES collection (id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS collection_cycle (
+    id                   VARCHAR(64) NOT NULL,
+    collection_id        VARCHAR(64) NOT NULL,
+    as_of_date           DATE        NOT NULL,
+    status               VARCHAR(32) NOT NULL,
+    job_id               VARCHAR(64),
+    item_count           BIGINT,
+    failed_fetch_count   BIGINT,
+    break_fund_count     BIGINT,
+    started_at           DATETIME(6),
+    completed_at         DATETIME(6),
+    PRIMARY KEY (id),
+    UNIQUE KEY uq_collection_cycle_date (collection_id, as_of_date),
+    CONSTRAINT fk_collection_cycle_collection FOREIGN KEY (collection_id) REFERENCES collection (id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS collection_item (
+    id                 VARCHAR(64)  NOT NULL,
+    cycle_id           VARCHAR(64)  NOT NULL,
+    pair_id            VARCHAR(64)  NOT NULL,
+    left_value         VARCHAR(128) NOT NULL,
+    right_value        VARCHAR(128) NOT NULL,
+    left_dataset_id    VARCHAR(64),
+    right_dataset_id   VARCHAR(64),
+    recon_run_id       VARCHAR(64),
+    fetch_status       VARCHAR(32)  NOT NULL,
+    recon_status       VARCHAR(32),
+    matched_count      BIGINT,
+    break_count        BIGINT,
+    only_in_left_count BIGINT,
+    only_in_right_count BIGINT,
+    error_message      VARCHAR(1024),
+    PRIMARY KEY (id),
+    UNIQUE KEY uq_collection_item_pair (cycle_id, pair_id),
+    KEY idx_collection_item_run (recon_run_id),
+    CONSTRAINT fk_collection_item_cycle FOREIGN KEY (cycle_id) REFERENCES collection_cycle (id),
+    CONSTRAINT fk_collection_item_pair FOREIGN KEY (pair_id) REFERENCES collection_pair (id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

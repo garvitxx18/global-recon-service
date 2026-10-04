@@ -14,6 +14,9 @@ CREATE TABLE dbo.dataset (
     owner_email         VARCHAR(320)  NOT NULL,
     ingestion_notes     NVARCHAR(4000) NULL,
     record_path         VARCHAR(255)  NULL,
+    source_kind         VARCHAR(16)   NOT NULL CONSTRAINT df_dataset_source_kind DEFAULT ('FILE'),
+    source_id           VARCHAR(64)   NULL,
+    source_params_json  NVARCHAR(MAX) NULL,
     created_at          DATETIME2(6)  NOT NULL,
     updated_at          DATETIME2(6)  NOT NULL,
     CONSTRAINT pk_dataset PRIMARY KEY (id)
@@ -21,6 +24,9 @@ CREATE TABLE dbo.dataset (
 
 IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = N'idx_dataset_owner' AND object_id = OBJECT_ID(N'dbo.dataset'))
 CREATE INDEX idx_dataset_owner ON dbo.dataset (owner_email);
+
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = N'idx_dataset_created' AND object_id = OBJECT_ID(N'dbo.dataset'))
+CREATE INDEX idx_dataset_created ON dbo.dataset (created_at);
 
 IF OBJECT_ID(N'dbo.dataset_record', N'U') IS NULL
 CREATE TABLE dbo.dataset_record (
@@ -119,6 +125,8 @@ CREATE TABLE dbo.recon_job (
     created_at       DATETIME2(6)   NOT NULL,
     started_at       DATETIME2(6)   NULL,
     completed_at     DATETIME2(6)   NULL,
+    collection_cycle_id VARCHAR(64) NULL,
+    collection_item_id  VARCHAR(64) NULL,
     CONSTRAINT pk_recon_job PRIMARY KEY (id)
 );
 
@@ -132,6 +140,8 @@ IF OBJECT_ID(N'dbo.recon_run', N'U') IS NULL
 CREATE TABLE dbo.recon_run (
     id                    VARCHAR(64)    NOT NULL,
     recon_plan_id         VARCHAR(64)    NOT NULL,
+    left_dataset_id       VARCHAR(64)    NULL,
+    right_dataset_id      VARCHAR(64)    NULL,
     owner_email           VARCHAR(320)   NOT NULL,
     status                VARCHAR(32)    NOT NULL,
     matched_count         BIGINT         NULL,
@@ -174,3 +184,111 @@ CREATE INDEX idx_recon_result_run ON dbo.recon_result (run_id);
 
 IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = N'idx_recon_result_run_status' AND object_id = OBJECT_ID(N'dbo.recon_result'))
 CREATE INDEX idx_recon_result_run_status ON dbo.recon_result (run_id, status);
+
+IF OBJECT_ID(N'dbo.source', N'U') IS NULL
+CREATE TABLE dbo.source (
+    id                 VARCHAR(64)    NOT NULL,
+    name               NVARCHAR(255)  NOT NULL,
+    vendor             NVARCHAR(128)  NOT NULL,
+    base_url           NVARCHAR(512)  NOT NULL,
+    path               NVARCHAR(255)  NOT NULL,
+    http_method        VARCHAR(8)     NOT NULL,
+    param_schema_json  NVARCHAR(MAX)  NOT NULL,
+    record_path        VARCHAR(255)   NULL,
+    secret_ref         VARCHAR(128)   NULL,
+    auth_type          VARCHAR(16)    NOT NULL CONSTRAINT df_source_auth_type DEFAULT ('NONE'),
+    auth_header        VARCHAR(64)    NULL,
+    max_concurrent     INT            NOT NULL CONSTRAINT df_source_max_concurrent DEFAULT (2),
+    enabled            BIT            NOT NULL CONSTRAINT df_source_enabled DEFAULT (1),
+    created_at         DATETIME2(6)   NOT NULL,
+    updated_at         DATETIME2(6)   NOT NULL,
+    CONSTRAINT pk_source PRIMARY KEY (id)
+);
+
+IF OBJECT_ID(N'dbo.collection', N'U') IS NULL
+CREATE TABLE dbo.collection (
+    id                    VARCHAR(64)    NOT NULL,
+    name                  NVARCHAR(255)  NOT NULL,
+    owner_email           VARCHAR(320)   NOT NULL,
+    plan_id               VARCHAR(64)    NOT NULL,
+    left_source_id        VARCHAR(64)    NOT NULL,
+    right_source_id       VARCHAR(64)    NOT NULL,
+    left_identity_param   VARCHAR(64)    NOT NULL,
+    right_identity_param  VARCHAR(64)    NOT NULL,
+    left_date_param       VARCHAR(64)    NOT NULL,
+    right_date_param      VARCHAR(64)    NOT NULL,
+    constant_params_json  NVARCHAR(MAX)  NULL,
+    date_policy           VARCHAR(16)    NOT NULL,
+    schedule_cron         VARCHAR(64)    NULL,
+    created_at            DATETIME2(6)   NOT NULL,
+    updated_at            DATETIME2(6)   NOT NULL,
+    CONSTRAINT pk_collection PRIMARY KEY (id),
+    CONSTRAINT fk_collection_plan FOREIGN KEY (plan_id) REFERENCES dbo.recon_plan (id),
+    CONSTRAINT fk_collection_left_source FOREIGN KEY (left_source_id) REFERENCES dbo.source (id),
+    CONSTRAINT fk_collection_right_source FOREIGN KEY (right_source_id) REFERENCES dbo.source (id)
+);
+
+IF OBJECT_ID(N'dbo.collection_member', N'U') IS NULL
+CREATE TABLE dbo.collection_member (
+    id             VARCHAR(64)  NOT NULL,
+    collection_id  VARCHAR(64)  NOT NULL,
+    email          VARCHAR(320) NOT NULL,
+    role           VARCHAR(16)  NOT NULL,
+    CONSTRAINT pk_collection_member PRIMARY KEY (id),
+    CONSTRAINT uq_collection_member UNIQUE (collection_id, email),
+    CONSTRAINT fk_collection_member_collection FOREIGN KEY (collection_id) REFERENCES dbo.collection (id)
+);
+
+IF OBJECT_ID(N'dbo.collection_pair', N'U') IS NULL
+CREATE TABLE dbo.collection_pair (
+    id             VARCHAR(64)    NOT NULL,
+    collection_id  VARCHAR(64)    NOT NULL,
+    left_value     NVARCHAR(128)  NOT NULL,
+    right_value    NVARCHAR(128)  NOT NULL,
+    sort_order     INT            NULL,
+    CONSTRAINT pk_collection_pair PRIMARY KEY (id),
+    CONSTRAINT uq_collection_pair_left UNIQUE (collection_id, left_value),
+    CONSTRAINT uq_collection_pair_right UNIQUE (collection_id, right_value),
+    CONSTRAINT fk_collection_pair_collection FOREIGN KEY (collection_id) REFERENCES dbo.collection (id)
+);
+
+IF OBJECT_ID(N'dbo.collection_cycle', N'U') IS NULL
+CREATE TABLE dbo.collection_cycle (
+    id                   VARCHAR(64)  NOT NULL,
+    collection_id        VARCHAR(64)  NOT NULL,
+    as_of_date           DATE         NOT NULL,
+    status               VARCHAR(32)  NOT NULL,
+    job_id               VARCHAR(64)  NULL,
+    item_count           BIGINT       NULL,
+    failed_fetch_count   BIGINT       NULL,
+    break_fund_count     BIGINT       NULL,
+    started_at           DATETIME2(6) NULL,
+    completed_at         DATETIME2(6) NULL,
+    CONSTRAINT pk_collection_cycle PRIMARY KEY (id),
+    CONSTRAINT uq_collection_cycle_date UNIQUE (collection_id, as_of_date),
+    CONSTRAINT fk_collection_cycle_collection FOREIGN KEY (collection_id) REFERENCES dbo.collection (id)
+);
+
+IF OBJECT_ID(N'dbo.collection_item', N'U') IS NULL
+CREATE TABLE dbo.collection_item (
+    id                  VARCHAR(64)    NOT NULL,
+    cycle_id            VARCHAR(64)    NOT NULL,
+    pair_id             VARCHAR(64)    NOT NULL,
+    left_value          NVARCHAR(128)  NOT NULL,
+    right_value         NVARCHAR(128)  NOT NULL,
+    left_dataset_id     VARCHAR(64)    NULL,
+    right_dataset_id    VARCHAR(64)    NULL,
+    recon_run_id        VARCHAR(64)    NULL,
+    fetch_status        VARCHAR(32)    NOT NULL,
+    recon_status        VARCHAR(32)    NULL,
+    matched_count       BIGINT         NULL,
+    break_count         BIGINT         NULL,
+    only_in_left_count  BIGINT         NULL,
+    only_in_right_count BIGINT         NULL,
+    error_message       NVARCHAR(1024) NULL,
+    CONSTRAINT pk_collection_item PRIMARY KEY (id),
+    CONSTRAINT uq_collection_item_pair UNIQUE (cycle_id, pair_id),
+    CONSTRAINT fk_collection_item_cycle FOREIGN KEY (cycle_id) REFERENCES dbo.collection_cycle (id),
+    CONSTRAINT fk_collection_item_pair FOREIGN KEY (pair_id) REFERENCES dbo.collection_pair (id)
+);
+

@@ -21,3 +21,7 @@ llm:
   api:
     url: http://localhost:9080
     path: /v1/complete
+
+recon:
+  retention:
+    enabled: false

@@ -43,6 +43,30 @@ public final class IdUtility {
         return prefixed("RS");
     }
 
+    public static String sourceId() {
+        return prefixed("SRC");
+    }
+
+    public static String collectionId() {
+        return prefixed("COL");
+    }
+
+    public static String collectionMemberId() {
+        return prefixed("CM");
+    }
+
+    public static String collectionPairId() {
+        return prefixed("CP");
+    }
+
+    public static String collectionCycleId() {
+        return prefixed("CY");
+    }
+
+    public static String collectionItemId() {
+        return prefixed("CI");
+    }
+
     private static String prefixed(String prefix) {
         return prefix + "-" + UUID.randomUUID().toString().replace("-", "").substring(0, 12).toUpperCase();
     }

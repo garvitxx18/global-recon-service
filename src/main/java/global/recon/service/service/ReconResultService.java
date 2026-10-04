@@ -16,4 +16,6 @@ public interface ReconResultService {
     Page<ReconResult> getResults(String runId, ReconStatus status, Pageable pageable);
 
     Map<String, Long> summarize(ReconRun run);
+
+    Map<String, Long> summarizeByRunId(String runId);
 }

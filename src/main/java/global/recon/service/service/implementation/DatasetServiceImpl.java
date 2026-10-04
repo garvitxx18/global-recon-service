@@ -8,6 +8,7 @@ import global.recon.service.model.Dataset;
 import global.recon.service.model.DatasetFormat;
 import global.recon.service.model.DatasetProfile;
 import global.recon.service.model.DatasetRecordView;
+import global.recon.service.model.DatasetSourceKind;
 import global.recon.service.model.DatasetStatus;
 import global.recon.service.repository.DatasetRecordRepository;
 import global.recon.service.repository.DatasetRepository;
@@ -75,6 +76,7 @@ public class DatasetServiceImpl implements DatasetService {
         dataset.setOwnerEmail(UserContext.require());
         dataset.setIngestionNotes(limitNotes(ingestionNotes));
         dataset.setRecordPath(normalizeRecordPath(recordPath));
+        dataset.setSourceKind(DatasetSourceKind.FILE);
         dataset.setCreatedAt(now);
         dataset.setUpdatedAt(now);
         datasetRepository.save(dataset);
@@ -99,6 +101,58 @@ public class DatasetServiceImpl implements DatasetService {
             fail(dataset, ex.getMessage());
             throw new InvalidRequestException("Failed to ingest dataset: " + ex.getMessage());
         }
+    }
+
+    @Override
+    @Transactional
+    public Dataset ingestFromSource(
+            String sourceId,
+            Map<String, String> params,
+            String name,
+            String recordPath,
+            byte[] jsonBody) {
+        if (jsonBody == null || jsonBody.length == 0) {
+            throw new InvalidRequestException("Configured source returned an empty body");
+        }
+        Instant now = Instant.now();
+        Dataset dataset = new Dataset();
+        dataset.setId(IdUtility.datasetId());
+        String display = name == null || name.isBlank() ? sourceId : name.trim();
+        dataset.setName(display);
+        dataset.setOriginalFilename(sourceId + ".json");
+        dataset.setFormat(DatasetFormat.JSON);
+        dataset.setStatus(DatasetStatus.UPLOADING);
+        dataset.setOwnerEmail(UserContext.require());
+        dataset.setRecordPath(normalizeRecordPath(recordPath));
+        dataset.setSourceKind(DatasetSourceKind.SOURCE);
+        dataset.setSourceId(sourceId);
+        dataset.setSourceParamsJson(jsonCodec.write(params == null ? Map.of() : params));
+        dataset.setCreatedAt(now);
+        dataset.setUpdatedAt(now);
+        datasetRepository.save(dataset);
+        try (InputStream inputStream = new java.io.ByteArrayInputStream(jsonBody)) {
+            return finishIngest(dataset, inputStream);
+        } catch (InvalidRequestException ex) {
+            fail(dataset, ex.getMessage());
+            throw ex;
+        } catch (Exception ex) {
+            fail(dataset, ex.getMessage());
+            throw new InvalidRequestException("Failed to ingest configured source: " + ex.getMessage());
+        }
+    }
+
+    private Dataset finishIngest(Dataset dataset, InputStream inputStream) throws Exception {
+        Map<String, ProfileUtility.ColumnAccumulator> accumulators = new LinkedHashMap<>();
+        long rows = normalizationService.normalize(dataset, inputStream, accumulators);
+        dataset.setRowCount(rows);
+        dataset.setStatus(DatasetStatus.NORMALIZED);
+        dataset.setUpdatedAt(Instant.now());
+        datasetRepository.save(dataset);
+        DatasetProfile profile = profilingService.saveProfile(dataset, accumulators);
+        cachingService.put(HazelcastConfig.DATASET_PROFILE_MAP, dataset.getId(), profile);
+        dataset.setStatus(DatasetStatus.PROFILED);
+        dataset.setUpdatedAt(Instant.now());
+        return datasetRepository.save(dataset);
     }
 
     @Override

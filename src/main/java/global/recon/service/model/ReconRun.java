@@ -23,6 +23,12 @@ public class ReconRun {
     @Column(name = "recon_plan_id", nullable = false, length = 64)
     private String reconPlanId;
 
+    @Column(name = "left_dataset_id", length = 64)
+    private String leftDatasetId;
+
+    @Column(name = "right_dataset_id", length = 64)
+    private String rightDatasetId;
+
     @Column(name = "owner_email", nullable = false, length = 320)
     private String ownerEmail;
 
@@ -82,6 +88,22 @@ public class ReconRun {
 
     public void setReconPlanId(String reconPlanId) {
         this.reconPlanId = reconPlanId;
+    }
+
+    public String getLeftDatasetId() {
+        return leftDatasetId;
+    }
+
+    public void setLeftDatasetId(String leftDatasetId) {
+        this.leftDatasetId = leftDatasetId;
+    }
+
+    public String getRightDatasetId() {
+        return rightDatasetId;
+    }
+
+    public void setRightDatasetId(String rightDatasetId) {
+        this.rightDatasetId = rightDatasetId;
     }
 
     public String getOwnerEmail() {
